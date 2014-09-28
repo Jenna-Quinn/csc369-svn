@@ -27,23 +27,25 @@ void insert(struct list *L, int value){
     struct node *newnode = create_node(value);
     
     struct node *cur = L->head;
-    
-    if(L->head == NULL) {
+
+    pthread_mutex_lock(&L->lock);
+
+    if (L->head == NULL) {
 		L->head = newnode;
-        return; 
-    } else if(L->head->value >value) {
+    } else if (L->head->value > value) {
         newnode->next = L->head;
 		L->head = newnode;
-        return;
+    } else {
+        while(cur->next != NULL && cur->next->value <= value) {
+            cur = cur->next;
+        }
+
+        newnode->next = cur->next;
+        cur->next = newnode;
+        // head doesn't change
     }
-    
-    while(cur->next != NULL && cur->next->value <= value) {
-        cur = cur->next;
-    }
-    
-    newnode->next = cur->next;
-    cur->next = newnode;
-    // head doesn't change
+
+    pthread_mutex_unlock(&L->lock);
     return;
 }
 
