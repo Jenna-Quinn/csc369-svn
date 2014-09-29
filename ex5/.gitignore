@@ -1,3 +1,7 @@
+# Generated binaries
 /dolist
 /dosync
 /handoff
+
+# IDE files
+.idea
