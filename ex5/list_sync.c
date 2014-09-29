@@ -25,10 +25,10 @@ struct node *create_node(int value) {
 
 void insert(struct list *L, int value){
     struct node *newnode = create_node(value);
-    
-    struct node *cur = L->head;
 
     pthread_mutex_lock(&L->lock);
+
+    struct node *cur = L->head;
 
     if (L->head == NULL) {
 		L->head = newnode;
