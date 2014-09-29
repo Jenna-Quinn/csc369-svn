@@ -1,0 +1,45 @@
+Timing dolist...
+Thread 7 inserted 10000 values
+Thread 2 inserted 10000 values
+Thread 1 inserted 10000 values
+Thread 0 inserted 10000 values
+Thread 4 inserted 10000 values
+Thread 5 inserted 10000 values
+Thread 3 inserted 10000 values
+Thread 6 inserted 10000 values
+Total inserts = 80000
+Final length = 79999
+
+real	0m5.211s
+user	0m38.063s
+sys	0m0.184s
+
+Done.
+
+Timing dosync...
+./time.sh: line 12: 35830 Segmentation fault      (core dumped) ./dosync
+
+real	0m0.118s
+user	0m0.001s
+sys	0m0.005s
+
+Done.
+
+Timing handoff...
+Thread 3 inserted 10000 values
+Thread 1 inserted 10000 values
+Thread 6 inserted 10000 values
+Thread 2 inserted 10000 values
+Thread 5 inserted 10000 values
+Thread 7 inserted 10000 values
+Thread 4 inserted 10000 values
+Thread 0 inserted 10000 values
+Total inserts = 80000
+Final length = 80000
+
+real	0m48.841s
+user	6m11.767s
+sys	0m6.873s
+
+Done.
+
