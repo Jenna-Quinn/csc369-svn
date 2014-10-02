@@ -20,12 +20,13 @@ void *mymalloc(unsigned int size) {
     return NULL;
 }
 
-/* myfree: unallocates memory that has been allocated with mymalloc.
-     void *ptr: pointer to the first byte of a block of memory allocated by
-                mymalloc.
-     retval: 0 if the memory was successfully freed and 1 otherwise.
-             (NOTE: the system version of free returns no error.)
-*/
+/**
+ * unallocates memory that has been allocated with mymalloc.
+ *
+ * @param ptr pointer to the first byte of a block of memory allocated by mymalloc.
+ * @return 0 if the memory was successfully freed and 1 otherwise.
+ *         (NOTE: the system version of free returns no error.)
+ */
 unsigned int myfree(void *ptr) {
 #if SYSTEM_MALLOC
     free(ptr);

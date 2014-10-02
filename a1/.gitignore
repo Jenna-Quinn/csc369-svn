@@ -1,3 +1,9 @@
+# Generated files
+*.o
+*.dSYM
+/test_malloc
+/test_malloc_opt
+
 # IDE files
 .idea
 
