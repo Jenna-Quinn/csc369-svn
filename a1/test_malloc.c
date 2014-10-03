@@ -34,8 +34,9 @@ void *max_heap = 0;
  * allocated because using the libc malloc would interfere
  * using mymalloc.
  */
+enum operation { MALLOC, FREE };
 struct trace_op {
-    enum {MALLOC, FREE} type;
+    enum operation type;
     int index; // for myfree() to use later
     int size;
 };
@@ -151,7 +152,7 @@ int main(int argc, char *argv[]) {
         perror("Trace file open:");
         exit(1);
     }
-    int num_threads = load_trace(fp);
+    int num_threads = load_trace(fp) + 1;
 
     if (pthread_mutex_init(&mywait, NULL)) {
         fprintf(stderr, "Error: mutex initialization failed.\n");
