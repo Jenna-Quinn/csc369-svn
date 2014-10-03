@@ -1,0 +1,3 @@
+TODO: in one or two paragraphs, describe the changes you made to improve the efficiency
+of your malloc and free implementations. Your description should include some justification
+(specific use cases or traces, for example) that of the design decisions you made.

@@ -1,0 +1,4 @@
+TODO: In two paragraphs, describe:
+
+1. the data structures you use to track each memory allocation and
+2. the algorithm you use to select which memory to allocate/reallocate
