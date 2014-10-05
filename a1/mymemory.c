@@ -4,6 +4,7 @@
 #include <pthread.h>
 
 #define SYSTEM_MALLOC 0
+#define MYMALLOCDEBUG 1
 
 /*
  * Using uintptr_t to keep references to the heap start and end as integers.
@@ -30,6 +31,29 @@ struct __header_t {
     // Whether the block is free or in use
     char in_use;
 };
+
+/**
+ * Print the current state of the heap to stderr
+ */
+static void __dump_heap(void) {
+    warnx("------ <HEAP> ------");
+
+    struct __header_t *curr_h = NULL;
+    for (uintptr_t i = __heapstart; i < __heapend; i += sizeof(struct __header_t) + curr_h->size) {
+        curr_h = (struct __header_t *) i;
+        warnx("<BLOCK>");
+
+        warnx("addr == %p", curr_h);
+        warnx("prev == %p", curr_h->prev);
+        warnx("next == %p", curr_h->next);
+        warnx("size == %zu", curr_h->size);
+        warnx("in_use? %s", curr_h->in_use ? "YES" : "NO");
+
+        warnx("</BLOCK>");
+    }
+
+    warnx("------ </HEAP> -----");
+}
 
 /**
  * Attempt to split a block into two blocks, leaving the first block with the given data size
@@ -59,6 +83,9 @@ static void __split_block(struct __header_t *h, size_t size) {
 static void *__extend_heap(size_t incr) {
     void *x = sbrk((int) incr);
     if (x == (void *) -1) {
+#ifdef MYMALLOCDEBUG
+        warn("sbrk failed when extending heap");
+#endif
         return NULL;
     }
     __heapend += incr;
@@ -91,7 +118,12 @@ void *mymalloc(unsigned int size) {
     /* If we haven't saved the heap start address yet, do some initialization */
     if (__heapstart == 0) {
         __heapstart = __heapend = (uintptr_t) sbrk(0);
-        if (__heapstart == -1) return NULL;
+        if (__heapstart == -1) {
+#ifdef MYMALLOCDEBUG
+            warn("Initial sbrk failed");
+#endif
+            return NULL;
+        }
     }
 
     /*
@@ -128,6 +160,10 @@ void *mymalloc(unsigned int size) {
         new_h->size = size;
         new_h->in_use = 1;
     }
+
+#ifdef MYMALLOCDEBUG
+    __dump_heap();
+#endif
 
     pthread_mutex_unlock(&__lock);
 
