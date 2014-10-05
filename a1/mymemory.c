@@ -5,7 +5,7 @@
 #include <err.h>
 
 #define SYSTEM_MALLOC 0
-#define MYMALLOCDEBUG 1
+#define MYMALLOCDEBUG 0
 
 /*
  * Using uintptr_t to keep references to the heap start and end as integers.
@@ -47,6 +47,7 @@ static void __check_magic_number(struct __header_t *h) {
                 h, MAGIC, h->magic);
 }
 
+#if MYMALLOCDEBUG
 /**
  * Print the current state of the heap to stderr
  */
@@ -70,6 +71,7 @@ static void __dump_heap(void) {
 
     warnx("------ </HEAP> -----");
 }
+#endif
 
 /**
  * Attempt to split a block into two blocks, leaving the first block with the given data size
@@ -80,7 +82,7 @@ static void __split_block(struct __header_t *h, size_t size) {
         return;
     }
 
-#ifdef MYMALLOCDEBUG
+#if MYMALLOCDEBUG
     warnx("Splitting block (addr == %p) with size == %zu...", h, size);
 #endif
 
@@ -99,7 +101,7 @@ static void __split_block(struct __header_t *h, size_t size) {
     h->next = new_h;
     h->size = size;
 
-#ifdef MYMALLOCDEBUG
+#if MYMALLOCDEBUG
     warnx("Done splitting block. New block has addr == %p", new_h);
 #endif
 }
@@ -112,7 +114,7 @@ static struct __header_t *__merge_blocks(struct __header_t *h1, struct __header_
         /* Block is in use */
         return NULL;
 
-#ifdef MYMALLOCDEBUG
+#if MYMALLOCDEBUG
     warnx("Attempting to merge blocks %p and %p", h1, h2);
 #endif
 
@@ -122,7 +124,7 @@ static struct __header_t *__merge_blocks(struct __header_t *h1, struct __header_
     if (h2->next != (struct __header_t *) __heapend)
         h2->next->prev = h1;
 
-#ifdef MYMALLOCDEBUG
+#if MYMALLOCDEBUG
     warnx("Done merging blocks %p and %p", h1, h2);
 #endif
 
@@ -137,7 +139,7 @@ static struct __header_t *__merge_blocks(struct __header_t *h1, struct __header_
 static void *__extend_heap(size_t incr) {
     void *x = sbrk((int) incr);
     if (x == (void *) -1) {
-#ifdef MYMALLOCDEBUG
+#if MYMALLOCDEBUG
         warn("sbrk failed when extending heap");
 #endif
         return NULL;
@@ -173,7 +175,7 @@ void *mymalloc(unsigned int size) {
     if (__heapstart == 0) {
         __heapstart = __heapend = (uintptr_t) sbrk(0);
         if (__heapstart == -1) {
-#ifdef MYMALLOCDEBUG
+#if MYMALLOCDEBUG
             warn("Initial sbrk failed");
 #endif
             return NULL;
@@ -202,7 +204,7 @@ void *mymalloc(unsigned int size) {
         /* Valid free block found */
         new_h = curr_h;
 
-#ifdef MYMALLOCDEBUG
+#if MYMALLOCDEBUG
         warnx("HEAP BEFORE SPLIT:");
         __dump_heap();
 #endif
@@ -210,7 +212,7 @@ void *mymalloc(unsigned int size) {
         /* Attempt to split the block */
         __split_block(new_h, size);
 
-#ifdef MYMALLOCDEBUG
+#if MYMALLOCDEBUG
         warnx("HEAP AFTER SPLIT:");
         __dump_heap();
 #endif
@@ -229,7 +231,7 @@ void *mymalloc(unsigned int size) {
         new_h->magic = MAGIC;
     }
 
-#ifdef MYMALLOCDEBUG
+#if MYMALLOCDEBUG
     __dump_heap();
 #endif
 
@@ -263,7 +265,7 @@ unsigned int myfree(void *ptr) {
     /* Flag block as not-in-use */
     h->in_use = 0;
 
-#ifdef MYMALLOCDEBUG
+#if MYMALLOCDEBUG
     warnx("HEAP BEFORE MERGE:");
     __dump_heap();
 #endif
@@ -278,7 +280,7 @@ unsigned int myfree(void *ptr) {
         __merge_blocks(h, h->next);
     }
 
-#ifdef MYMALLOCDEBUG
+#if MYMALLOCDEBUG
     warnx("HEAP AFTER MERGE:");
     __dump_heap();
 #endif

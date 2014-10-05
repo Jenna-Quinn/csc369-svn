@@ -72,8 +72,10 @@ void *dowork(void *threadid) {
                             id, i);
                 }
 
+#if MYMALLOCDEBUG
                 /* Store "test" in allocated space */
                 strncpy(tr.blocks[tr.ops[i].index], "test", 4);
+#endif
 
                 check_heap();
                 break;
@@ -82,9 +84,11 @@ void *dowork(void *threadid) {
                 debug_print("thread%li: free block %d\n", id, tr.ops[i].index);
                 ptr = tr.blocks[tr.ops[i].index];
 
+#if MYMALLOCDEBUG
                 /* Verify that "test" is still in the allocated space */
                 if (strcmp(ptr, "test") != 0)
                     warnx("Warning: Expected ptr (%p) to equal \"test\", but ptr == %s", ptr, ptr);
+#endif
 
                 if(myfree(ptr)) {
                     fprintf(stderr, "Error: Thread%li failed on free (block %d).\n",
