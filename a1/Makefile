@@ -4,8 +4,11 @@
 
 all : test_malloc test_malloc_opt
 
-test_malloc: test_malloc.o mymemory.o
-	gcc -Wall -g -o test_malloc test_malloc.c mymemory.c -lpthread
+test_malloc: test_malloc.c mymemory.c
+	gcc -Wall -Wno-deprecated-declarations -g -o test_malloc test_malloc.c mymemory.c -lpthread
 
-test_malloc_opt: test_malloc.o mymemory_opt.o
-	gcc -Wall -g -o test_malloc_opt test_malloc.c mymemory_opt.c -lpthread
+test_malloc_opt: test_malloc.c mymemory_opt.c
+	gcc -Wall -Wno-deprecated-declarations -g -o test_malloc_opt test_malloc.c mymemory_opt.c -lpthread
+
+clean:
+	rm test_malloc test_malloc_opt *.o
