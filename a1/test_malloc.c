@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include <string.h>
+#include <err.h>
 
 #define MAX_THREADS 10
 #define MAX_OPS 25000
@@ -69,12 +71,21 @@ void *dowork(void *threadid) {
                     fprintf(stderr, "Error: Thread %li failed on allocation %i.\n",
                             id, i);
                 }
+
+                /* Store "test" in allocated space */
+                strncpy(tr.blocks[tr.ops[i].index], "test", 4);
+
                 check_heap();
                 break;
 
             case FREE:
                 debug_print("thread%li: free block %d\n", id, tr.ops[i].index);
                 ptr = tr.blocks[tr.ops[i].index];
+
+                /* Verify that "test" is still in the allocated space */
+                if (strcmp(ptr, "test") != 0)
+                    warnx("Warning: Expected ptr (%p) to equal \"test\", but ptr == %s", ptr, ptr);
+
                 if(myfree(ptr)) {
                     fprintf(stderr, "Error: Thread%li failed on free (block %d).\n",
                             id, i);
