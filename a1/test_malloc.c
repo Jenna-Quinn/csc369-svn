@@ -38,7 +38,7 @@ enum operation { MALLOC, FREE };
 struct trace_op {
     enum operation type;
     int index; // for myfree() to use later
-    int size;
+    unsigned int size;
 };
 
 struct trace {
@@ -95,7 +95,7 @@ int load_trace(FILE *fp) {
     int i;
     int thread;
     int index;
-    int size;
+    unsigned int size;
     int ci;
     char type[10];
     int max_thread = 0;
