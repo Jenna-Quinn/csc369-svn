@@ -15,7 +15,7 @@ i = 0
 while i < numblocks:
 	size = random.randint(0, maxblocksize)
 	size = (size / 4) * 4
-	tid = random.randint(0, numthreads)
+	tid = random.randint(0, numthreads - 1)
 	trace.append(('m', tid, i,  size))
 	i += 1
 
