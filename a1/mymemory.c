@@ -9,18 +9,10 @@
  * Using uintptr_t to keep references to the heap start and end as integers.
  * See <https://www.securecoding.cert.org/confluence/display/seccode/INT36-C.+Converting+a+pointer+to+integer+or+integer+to+pointer>
  */
-struct __heap_info_t {
-    uintptr_t heapstart;
-    uintptr_t heapend;
+static uintptr_t __heapstart = 0, __heapend = 0;
 
-    // Lock to ensure atomicity
-    pthread_mutex_t lock;
-};
-
-static struct __heap_info_t __heapinfo = {
-    .heapstart = 0,
-    .heapend = 0
-};
+// Lock to ensure atomicity
+static pthread_mutex_t __lock = PTHREAD_MUTEX_INITIALIZER;
 
 /*
  * Structure to store block information inline with the allocated blocks.
@@ -37,35 +29,40 @@ struct __header_t {
 
     // Whether the block is free or in use
     char in_use;
-
-    // Lock to ensure atomicity
-    pthread_mutex_t lock;
 };
-
-static void __dump_heap(void) {
-
-}
 
 /**
  * Attempt to split a block into two blocks, leaving the first block with the given data size
  */
-static void __split_block(struct __header_t *h, unsigned int size) {
-    if (h->size - sizeof(struct __header_t) - size <= sizeof(struct __header_t)) {
+static void __split_block(struct __header_t *h, size_t size) {
+    if (h->size - size <= sizeof(struct __header_t)) {
         /* Not enough room to store second header and at least one byte of data */
         return;
     }
 
-    struct __header_t *new;
+    struct __header_t *new_h = (struct __header_t *) (((uintptr_t) (h + 1)) + size);
+    new_h->prev = h;
+    new_h->next = h->next;
+    new_h->size = h->size - sizeof(struct __header_t) - size;
 
-    new = h + size;
-    new->prev = h;
-    new->next = h->next;
-    new->size = h->size - sizeof(struct __header_t) - size;
+    if (h->next != (struct __header_t *) __heapend)
+        h->next->prev = new_h;
+    h->next = new_h;
+    h->size = size;
+}
 
-    if (h->next != (struct __header_t *) __heapinfo.heapend)
-        h->next->prev = new;
-    h->next = new;
-    h->size = sizeof(struct __header_t) + size;
+/**
+ * Extend the heap by requesting more memory via sbrk.
+ *
+ * @param incr the amount of bytes to expand the heap by
+ */
+static void *__extend_heap(size_t incr) {
+    void *x = sbrk((int) incr);
+    if (x == (void *) -1) {
+        return NULL;
+    }
+    __heapend += incr;
+    return x;
 }
 
 /**
@@ -84,68 +81,58 @@ void *mymalloc(unsigned int size) {
     return malloc(size);
 #endif
 
-    /* Block header for the newly-allocated block */
-    struct __header_t *h = NULL;
+    struct __header_t
+            *new_h = NULL,  // Block header for the newly-allocated block
+            *curr_h = NULL; // Current header when iterating over block list
+
+    /* Lock to prevent concurrent access */
+    pthread_mutex_lock(&__lock);
 
     /* If we haven't saved the heap start address yet, do some initialization */
-    pthread_mutex_lock(&__heapinfo.lock);
-    if (__heapinfo.heapstart == 0) {
-        __heapinfo.heapstart = __heapinfo.heapend = (uintptr_t) sbrk(0);
+    if (__heapstart == 0) {
+        __heapstart = __heapend = (uintptr_t) sbrk(0);
+        if (__heapstart == -1) return NULL;
     }
-    pthread_mutex_unlock(&__heapinfo.lock);
 
     /*
      * First-fit strategy to find free regions of memory
      */
-    for (uintptr_t i = __heapinfo.heapstart; i < __heapinfo.heapend; i += h->size) {
-        h = (struct __header_t *) i;
-        pthread_mutex_lock(&h->lock);
+    for (uintptr_t i = __heapstart; i < __heapend; i += sizeof(struct __header_t) + curr_h->size) {
+        curr_h = (struct __header_t *) i;
 
-        if (h->in_use) {
+        if (curr_h->in_use) {
             // Block is in use
-            pthread_mutex_unlock(&h->lock);
             continue;
         }
 
-        if (h->size < size) {
+        if (curr_h->size < size) {
             // Block is too small
-            pthread_mutex_unlock(&h->lock);
             continue;
         }
 
-        /* Valid free block found; attempt to split first */
-        __split_block(h, size);
+        /* Valid free block found */
+        new_h = curr_h;
+
+        /* Attempt to split the block */
+        __split_block(new_h, size);
 
         /* Flag block as in-use */
-        h->in_use = 1;
-
-        pthread_mutex_unlock(&h->lock);
-
-        /* Return address of data start */
-        return h + sizeof(struct __header_t);
+        new_h->in_use = 1;
     }
 
-    /* Keep track of the previous block */
-    struct __header_t *prev = NULL;
-    if (h != NULL)
-        prev = h;
+    if (new_h == NULL) {
+        /* No valid free block found; extend the heap with sbrk */
+        new_h = __extend_heap(sizeof(struct __header_t) + size);
+        new_h->prev = curr_h;
+        new_h->next = (struct __header_t *) __heapend;
+        new_h->size = size;
+        new_h->in_use = 1;
+    }
 
-    /* No valid free block found; extend the heap with sbrk */
-    pthread_mutex_lock(&__heapinfo.lock);
-
-    uintptr_t expand_by = sizeof(struct __header_t) + size;
-    h = sbrk((int) expand_by);
-    __heapinfo.heapend += expand_by;
-
-    h->prev = prev;
-    h->next = (struct __header_t *) __heapinfo.heapend;
-    h->size = expand_by;
-    h->in_use = 1;
-
-    pthread_mutex_unlock(&__heapinfo.lock);
+    pthread_mutex_unlock(&__lock);
 
     /* Return address of data start */
-    return h + 1;
+    return new_h + 1;
 }
 
 /**
