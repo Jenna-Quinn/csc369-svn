@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <err.h>
+#include <string.h>
 
 #define SYSTEM_MALLOC 0
 #define MYMALLOCDEBUG 0
@@ -236,6 +237,9 @@ void *mymalloc(unsigned int size) {
 #if MYMALLOCDEBUG
     __dump_heap();
 #endif
+
+    /* Zero-out the allocated memory */
+    memset(new_h + 1, '\0', size);
 
     pthread_mutex_unlock(&__lock);
 
