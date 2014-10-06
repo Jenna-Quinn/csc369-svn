@@ -55,7 +55,8 @@ static void __dump_heap(void) {
     warnx("------ <HEAP> ------");
 
     struct __header_t *curr_h = NULL;
-    for (uintptr_t i = __heapstart; i < __heapend; i += sizeof(struct __header_t) + curr_h->size) {
+    uintptr_t i;
+    for (i = __heapstart; i < __heapend; i += sizeof(struct __header_t) + curr_h->size) {
         curr_h = (struct __header_t *) i;
         warnx("<BLOCK>");
 
@@ -185,7 +186,8 @@ void *mymalloc(unsigned int size) {
     /*
      * First-fit strategy to find free regions of memory
      */
-    for (uintptr_t i = __heapstart; i < __heapend; i += sizeof(struct __header_t) + curr_h->size) {
+    uintptr_t i;
+    for (i = __heapstart; i < __heapend; i += sizeof(struct __header_t) + curr_h->size) {
         curr_h = (struct __header_t *) i;
 
         /* Verify block integrity */
