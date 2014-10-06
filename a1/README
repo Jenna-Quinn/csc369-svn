@@ -1,4 +1,9 @@
-TODO: In two paragraphs, describe:
+`mymemory.c` uses a [doubly-linked list](http://en.wikipedia.org/wiki/Doubly_linked_list) to keep track of allocated
+blocks of memory. Each block in the list starts with 32 bytes of metadata in a `struct __header_t` structure. This
+structure contains a reference to the *previous* and *next* blocks, the number of allocated bytes following the header,
+a flag to indicate whether it's in use, and a magic number for integrity checking.
 
-1. the data structures you use to track each memory allocation and
-2. the algorithm you use to select which memory to allocate/reallocate
+`mymemory.c` uses the *first-fit* strategy to find free blocks of memory: simply iterate through the block list until
+a free block is found with enough space to contain the given number of bytes. When a large enough block is found,
+divide the block into two, and return a pointer to the first region. If no block large enough is found, then call
+`sbrk` to extend the size of the heap.
