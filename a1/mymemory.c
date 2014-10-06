@@ -27,7 +27,7 @@ struct __header_t {
     // Pointer to the next block
     struct __header_t *next;
 
-    // Size of the block in bytes (including this header)
+    // Size of the block in bytes (excluding this header)
     size_t size;
 
     // Whether the block is free or in use
