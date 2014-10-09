@@ -238,9 +238,6 @@ void *mymalloc(unsigned int size) {
     __dump_heap();
 #endif
 
-    /* Zero-out the allocated memory */
-    memset(new_h + 1, '\0', size);
-
     pthread_mutex_unlock(&__lock);
 
     /* Return address of data start */
