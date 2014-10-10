@@ -85,7 +85,9 @@ static uintptr_t __next_aligned(uintptr_t address) {
  */
 static void __check_magic_number(struct __header_t *h) {
     if (h->magic != MAGIC) {
+#if MYMALLOCDEBUG
         __dump_heap();
+#endif
         errx(1, "Expected magic number for block (addr == %p) to equal %u, but found %hu",
                 h, MAGIC, h->magic);
     }
