@@ -5,7 +5,7 @@
 #include <err.h>
 
 #define SYSTEM_MALLOC 0
-#define MYMALLOCDEBUG 1
+#define MYMALLOCDEBUG 0
 #define MYMALLOCDEBUGVERBOSE 0
 
 /*
