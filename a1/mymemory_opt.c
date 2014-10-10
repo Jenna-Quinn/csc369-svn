@@ -5,7 +5,8 @@
 #include <err.h>
 
 #define SYSTEM_MALLOC 0
-#define MYMALLOCDEBUG 0
+#define MYMALLOCDEBUG 1
+#define MYMALLOCDEBUGVERBOSE 0
 
 /*
  * Using uintptr_t to keep references to the heap start and end as integers.
@@ -50,7 +51,7 @@ static void __check_magic_number(struct __header_t *h) {
                 h, MAGIC, h->magic);
 }
 
-#if MYMALLOCDEBUG
+#if MYMALLOCDEBUGVERBOSE
 /**
  * Print the current state of the heap to stderr
  */
@@ -180,6 +181,7 @@ static void *__extend_heap(size_t incr) {
 #endif
         return NULL;
     }
+
     __heapend += incr;
     return x;
 }
@@ -207,7 +209,7 @@ static struct __header_t *__try_allocate_block(struct __header_t *h, unsigned in
 
     /* Valid free block found */
 
-#if MYMALLOCDEBUG
+#if MYMALLOCDEBUGVERBOSE
         warnx("HEAP BEFORE SPLIT:");
         __dump_heap();
 #endif
@@ -215,7 +217,7 @@ static struct __header_t *__try_allocate_block(struct __header_t *h, unsigned in
     /* Attempt to split the block */
     __split_block(h, size);
 
-#if MYMALLOCDEBUG
+#if MYMALLOCDEBUGVERBOSE
         warnx("HEAP AFTER SPLIT:");
         __dump_heap();
 #endif
@@ -297,7 +299,8 @@ void *mymalloc(unsigned int size) {
 
     if (new_h == NULL) {
         /* No valid free block found; extend the heap with sbrk */
-        new_h = __extend_heap(sizeof(struct __header_t) + size);
+        if ((new_h = __extend_heap(sizeof(struct __header_t) + size)) == NULL)
+            return NULL;
         new_h->prev = prev_h;
         new_h->next = (struct __header_t *) __heapend;
         new_h->size = size;
@@ -308,7 +311,7 @@ void *mymalloc(unsigned int size) {
     /* new_h is the most-recently accessed block */
     __last = (uintptr_t) new_h;
 
-#if MYMALLOCDEBUG
+#if MYMALLOCDEBUGVERBOSE
     __dump_heap();
 #endif
 
@@ -342,7 +345,7 @@ unsigned int myfree(void *ptr) {
     /* Flag block as not-in-use */
     h->in_use = 0;
 
-#if MYMALLOCDEBUG
+#if MYMALLOCDEBUGVERBOSE
     warnx("HEAP BEFORE MERGE:");
     __dump_heap();
 #endif
@@ -357,7 +360,7 @@ unsigned int myfree(void *ptr) {
         __merge_blocks(h, h->next);
     }
 
-#if MYMALLOCDEBUG
+#if MYMALLOCDEBUGVERBOSE
     warnx("HEAP AFTER MERGE:");
     __dump_heap();
 #endif
