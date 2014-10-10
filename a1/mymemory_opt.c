@@ -1,21 +1,10 @@
 #include <stdlib.h>
-#include <stdint.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <err.h>
-#include <string.h>
 
 #define SYSTEM_MALLOC 0
 #define MYMALLOCDEBUG 0
-
-/*
- * Using uintptr_t to keep references to the heap start and end as integers.
- * See <https://www.securecoding.cert.org/confluence/display/seccode/INT36-C.+Converting+a+pointer+to+integer+or+integer+to+pointer>
- */
-static uintptr_t __heapstart = 0, __heapend = 0;
-
-// Lock to ensure atomicity
-static pthread_mutex_t __lock = PTHREAD_MUTEX_INITIALIZER;
 
 /*
  * Structure to store block information inline with the allocated blocks.
@@ -30,14 +19,26 @@ struct __header_t {
     // Size of the block in bytes (excluding this header)
     size_t size;
 
-    // Whether the block is free or in use
-    char in_use;
-
     // Magic number for integrity checking
     unsigned short magic;
+
+    // Whether the block is free or in use
+    unsigned short in_use;
 };
 
 #define MAGIC 1234
+
+/*
+ * Using uintptr_t to keep references to the heap start and end as integers.
+ * See <https://www.securecoding.cert.org/confluence/display/seccode/INT36-C.+Converting+a+pointer+to+integer+or+integer+to+pointer>
+ */
+static uintptr_t __heapstart = 0, __heapend = 0;
+
+// Pointer to the most recently-accessed free block, for next-fit strategy
+static struct __header_t __last;
+
+// Lock to ensure atomicity
+static pthread_mutex_t __lock = PTHREAD_MUTEX_INITIALIZER;
 
 /**
 * Verify block integrity by checking the magic number
@@ -76,9 +77,43 @@ static void __dump_heap(void) {
 #endif
 
 /**
+* Initialize heap pointers. Return -1 on error.
+*/
+static int __init(void) {
+    __heapstart = __heapend = (uintptr_t) sbrk(0);
+    if (__heapstart == -1) {
+#if MYMALLOCDEBUG
+            warn("Initial sbrk failed");
+#endif
+        return -1;
+    }
+
+    if (__heapstart % sizeof(void *) != 0) {
+        /* Align heap start to the nearest word */
+        size_t adjust = sizeof(void *) - (__heapstart % sizeof(void *));
+        uintptr_t x = (uintptr_t) sbrk((int) adjust);
+
+        if (x == -1) {
+#if MYMALLOCDEBUG
+                warn("sbrk failed when aligning __heapstart");
+#endif
+            return -1;
+        }
+
+        __heapstart += x;
+        __heapend = __heapstart;
+    }
+
+    return 0;
+}
+
+/**
 * Attempt to split a block into two blocks, leaving the first block with the given data size
 */
 static void __split_block(struct __header_t *h, size_t size) {
+    /* Verify block integrity */
+    __check_magic_number(h);
+
     if (h->size - size <= sizeof(struct __header_t)) {
         /* Not enough room to store second header and at least one byte of data */
         return;
@@ -87,9 +122,6 @@ static void __split_block(struct __header_t *h, size_t size) {
 #if MYMALLOCDEBUG
     warnx("Splitting block (addr == %p) with size == %zu...", h, size);
 #endif
-
-    /* Verify block integrity */
-    __check_magic_number(h);
 
     struct __header_t *new_h = (struct __header_t *) (((uintptr_t) (h + 1)) + size);
     new_h->prev = h;
@@ -174,18 +206,12 @@ void *mymalloc(unsigned int size) {
     pthread_mutex_lock(&__lock);
 
     /* If we haven't saved the heap start address yet, do some initialization */
-    if (__heapstart == 0) {
-        __heapstart = __heapend = (uintptr_t) sbrk(0);
-        if (__heapstart == -1) {
-#if MYMALLOCDEBUG
-            warn("Initial sbrk failed");
-#endif
-            return NULL;
-        }
+    if (__heapstart == 0 && __init() == -1) {
+        return NULL;
     }
 
     /*
-     * First-fit strategy to find free regions of memory
+     * Next-fit strategy to find free regions of memory
      */
     uintptr_t i;
     for (i = __heapstart; i < __heapend; i += sizeof(struct __header_t) + curr_h->size) {
