@@ -42,16 +42,7 @@ struct __header_t {
 
 #define MAGIC 1234
 
-/**
-* Verify block integrity by checking the magic number
-*/
-static void __check_magic_number(struct __header_t *h) {
-    if (h->magic != MAGIC)
-        errx(1, "Expected magic number for block (addr == %p) to equal %u, but found %hu",
-                h, MAGIC, h->magic);
-}
-
-#if MYMALLOCDEBUGVERBOSE
+#if MYMALLOCDEBUG
 /**
  * Print the current state of the heap to stderr
  */
@@ -60,7 +51,7 @@ static void __dump_heap(void) {
 
     struct __header_t *curr_h = NULL;
     uintptr_t i;
-    for (i = __heapstart; i < __heapend; i += sizeof(struct __header_t) + curr_h->size) {
+    for (i = __heapstart; i < __heapend; i = (uintptr_t) curr_h->next) {
         curr_h = (struct __header_t *) i;
         warnx("<BLOCK>");
 
@@ -79,8 +70,19 @@ static void __dump_heap(void) {
 #endif
 
 /**
-* Initialize heap pointers. Return -1 on error.
-*/
+ * Verify block integrity by checking the magic number
+ */
+static void __check_magic_number(struct __header_t *h) {
+    if (h->magic != MAGIC) {
+        __dump_heap();
+        errx(1, "Expected magic number for block (addr == %p) to equal %u, but found %hu",
+                h, MAGIC, h->magic);
+    }
+}
+
+/**
+ * Initialize heap pointers. Return -1 on error.
+ */
 static int __init(void) {
     __heapstart = (uintptr_t) sbrk(0);
     if (__heapstart == -1) {
@@ -138,6 +140,9 @@ static void __split_block(struct __header_t *h, size_t size) {
     h->next = new_h;
     h->size = size;
 
+    __check_magic_number(h);
+    __check_magic_number(new_h);
+
 #if MYMALLOCDEBUG
     warnx("Done splitting block. New block has addr == %p", new_h);
 #endif
@@ -147,6 +152,9 @@ static void __split_block(struct __header_t *h, size_t size) {
 * Attempt to merge the given adjacent blocks
 */
 static struct __header_t *__merge_blocks(struct __header_t *h1, struct __header_t *h2) {
+    __check_magic_number(h1);
+    __check_magic_number(h2);
+
     if (h1->in_use || h2->in_use)
         /* Block is in use */
         return NULL;
@@ -160,6 +168,8 @@ static struct __header_t *__merge_blocks(struct __header_t *h1, struct __header_
 
     if (h2->next != (struct __header_t *) __heapend)
         h2->next->prev = h1;
+
+    __check_magic_number(h1);
 
 #if MYMALLOCDEBUG
     warnx("Done merging blocks %p and %p", h1, h2);
@@ -290,9 +300,11 @@ void *mymalloc(unsigned int size) {
     /*
      * Next-fit strategy to find free regions of memory
      */
-    if (__last != 0)
+    if (__last != 0) {
         /* Start at the most-recently accessed block */
+        __check_magic_number((struct __header_t *) __last);
         new_h = __find_allocate_block(__last, __heapend, size, &prev_h);
+    }
     if (new_h == NULL)
         /* Have not allocated block yet; iterate from the beginning of the heap */
         new_h = __find_allocate_block(__heapstart, __last != 0 ? __last : __heapend, size, &prev_h);
