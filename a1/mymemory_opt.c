@@ -14,9 +14,6 @@
  */
 static uintptr_t __heapstart = 0, __heapend = 0;
 
-// Pointer to the most recently-accessed block, for next-fit strategy
-static uintptr_t __last = 0;
-
 // Lock to ensure atomicity
 static pthread_mutex_t __lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -70,6 +67,20 @@ static void __dump_heap(void) {
 #endif
 
 /**
+ * Return 1 if the given address is word-aligned, otherwise 0
+ */
+static int __is_aligned(uintptr_t address) {
+    return address % sizeof(void *) == 0;
+}
+
+/**
+ * Return the word-aligned address following or equal to the given address
+ */
+static uintptr_t __next_aligned(uintptr_t address) {
+    return address + (sizeof(void *) - address % sizeof(void *));
+}
+
+/**
  * Verify block integrity by checking the magic number
  */
 static void __check_magic_number(struct __header_t *h) {
@@ -92,19 +103,18 @@ static int __init(void) {
         return -1;
     }
 
-    if (__heapstart % sizeof(void *) != 0) {
+    if (!__is_aligned(__heapstart)) {
         /* Align heap start to the nearest word */
-        size_t adjust = sizeof(void *) - (__heapstart % sizeof(void *));
-        uintptr_t x = (uintptr_t) sbrk((int) adjust);
+        uintptr_t heapstart_aligned = __next_aligned(__heapstart);
 
-        if (x == -1) {
+        if ((uintptr_t) sbrk((int) (heapstart_aligned - __heapstart)) == -1) {
 #if MYMALLOCDEBUG
                 warn("sbrk failed when aligning __heapstart");
 #endif
             return -1;
         }
 
-        __heapstart += x;
+        __heapstart = heapstart_aligned;
     }
 
     __heapend = __heapstart;
@@ -113,12 +123,9 @@ static int __init(void) {
 }
 
 /**
-* Attempt to split a block into two blocks, leaving the first block with the given data size
-*/
+ * Attempt to split a block into two blocks, leaving the first block with the given data size
+ */
 static void __split_block(struct __header_t *h, size_t size) {
-    /* Verify block integrity */
-    __check_magic_number(h);
-
     if (h->size - size <= sizeof(struct __header_t)) {
         /* Not enough room to store second header and at least one byte of data */
         return;
@@ -232,6 +239,9 @@ static struct __header_t *__try_allocate_block(struct __header_t *h, unsigned in
         __dump_heap();
 #endif
 
+    /* Set block size */
+    h->size = size;
+
     /* Flag block as in-use */
     h->in_use = 1;
     
@@ -297,17 +307,13 @@ void *mymalloc(unsigned int size) {
         return NULL;
     }
 
+    /* Normalize the size so it's word-aligned */
+    size = (unsigned int) __next_aligned(size);
+
     /*
-     * Next-fit strategy to find free regions of memory
+     * First-fit strategy to find free regions of memory
      */
-    if (__last != 0) {
-        /* Start at the most-recently accessed block */
-        __check_magic_number((struct __header_t *) __last);
-        new_h = __find_allocate_block(__last, __heapend, size, &prev_h);
-    }
-    if (new_h == NULL)
-        /* Have not allocated block yet; iterate from the beginning of the heap */
-        new_h = __find_allocate_block(__heapstart, __last != 0 ? __last : __heapend, size, &prev_h);
+    new_h = __find_allocate_block(__heapstart, __heapend, size, &prev_h);
 
     if (new_h == NULL) {
         /* No valid free block found; extend the heap with sbrk */
@@ -319,9 +325,6 @@ void *mymalloc(unsigned int size) {
         new_h->magic = MAGIC;
         new_h->in_use = 1;
     }
-
-    /* new_h is the most-recently accessed block */
-    __last = (uintptr_t) new_h;
 
 #if MYMALLOCDEBUGVERBOSE
     __dump_heap();
