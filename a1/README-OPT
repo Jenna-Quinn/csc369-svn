@@ -1,6 +1,10 @@
 To improve `mymalloc` efficiency, I did the following:
 
 - Avoid zeroing-out allocated memory by removing the call to `memset`.
-- Return early from the first-fit loop to prevent iterating over the entire block list every time.
-- Continue to use the first-fit strategy since it is faster than best-fit, but uses more space.
-- Continue to coalesce adjacent free blocks to use memory more effectively
+- Return early from the block iteration loop to prevent iterating over the entire block list every time.
+- Replace first-fit strategy with next-fit strategy avoid splintering the beginning of the block list;
+  this better distributes block sizes across the entire list. This prevents the situation in the first-fit strategy
+  where there are many small blocks at the beginning of the list, which causes the loop to perform many iterations
+  to find a suitable free block large enough. With the next-fit strategy, it's more likely to find a suitable block
+  faster since blocks if different sizes would be distributed evenly across the list.
+- Continue to coalesce adjacent free blocks so that they can be used to allocate larger sizes.
