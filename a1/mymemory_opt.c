@@ -14,6 +14,9 @@
  */
 static uintptr_t __heapstart = 0, __heapend = 0;
 
+// Pointer to the most recently-accessed block, for next-fit strategy
+static uintptr_t __last = 0;
+
 // Lock to ensure atomicity
 static pthread_mutex_t __lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -147,7 +150,6 @@ static void __split_block(struct __header_t *h, size_t size) {
     if (h->next != (struct __header_t *) __heapend)
         h->next->prev = new_h;
     h->next = new_h;
-    h->size = size;
 
     __check_magic_number(h);
     __check_magic_number(new_h);
@@ -255,29 +257,25 @@ static struct __header_t *__try_allocate_block(struct __header_t *h, unsigned in
  *
  * @param start  memory address of a block at the beginning of the sequence
  * @param end    memory address after the last block in the sequence
- * @param prev_h pointer to a (struct __header_t *); will point at the block *before* the successfully-allocated block,
- *               or at the last block in the sequence if no block was allocated. prev_h is not modified if the *first*
- *               block in the sequence was allocated.
+ * @param prev_h pointer to a (struct __header_t *); will point at the block *before* the end of the heap if
+ *               it was iterated over.
  * @return       a pointer to the newly-allocated block, or NULL if the block could not be allocated
  */
-static struct __header_t *__find_allocate_block(uintptr_t start, uintptr_t end, unsigned int size, struct __header_t **prev_h) {
-    struct __header_t *h, *_prev_h = NULL;
+static struct __header_t *__find_allocate_block(uintptr_t start, uintptr_t end, unsigned int size, struct __header_t **last_h) {
+    struct __header_t *h;
 
     uintptr_t current;
     for (current = start; current < end; current = (uintptr_t) h->next) {
         h = (struct __header_t *) current;
         if (__try_allocate_block(h, size) != NULL) {
             /* Successfully allocated block */
-            if (_prev_h != NULL)
-                *prev_h = _prev_h;
             return h;
         }
-        _prev_h = h;
+        if (h->next == (struct __header_t *) __heapend)
+            *last_h = h;
     }
 
     /* No block could be allocated */
-    if (_prev_h != NULL)
-        *prev_h = _prev_h;
     return NULL;
 };
 
@@ -299,7 +297,7 @@ void *mymalloc(unsigned int size) {
 
     struct __header_t
             *new_h = NULL,  // Block header for the newly-allocated block
-            *prev_h = NULL; // Current header when iterating over block list
+            *last_h = NULL; // Header directly before __heapend
 
     /* Lock to prevent concurrent access */
     pthread_mutex_lock(&__lock);
@@ -310,23 +308,34 @@ void *mymalloc(unsigned int size) {
     }
 
     /* Normalize the size so it's word-aligned */
-    size = (unsigned int) __next_aligned(size);
+    if (size % sizeof(void *) != 0)
+        size += (sizeof(void *) - size % sizeof(void *));
 
     /*
-     * First-fit strategy to find free regions of memory
+     * Next-fit strategy to find free regions of memory
      */
-    new_h = __find_allocate_block(__heapstart, __heapend, size, &prev_h);
-
+    if (__last != 0) {
+        /* Start at the most-recently accessed block */
+        __check_magic_number((struct __header_t *) __last);
+        new_h = __find_allocate_block(__last, __heapend, size, &last_h);
+    }
+    if (new_h == NULL)
+        /* Have not allocated block yet; iterate from the beginning of the heap */
+        new_h = __find_allocate_block(__heapstart, __last != 0 ? __last : __heapend, size, &last_h);
+    
     if (new_h == NULL) {
         /* No valid free block found; extend the heap with sbrk */
         if ((new_h = __extend_heap(sizeof(struct __header_t) + size)) == NULL)
             return NULL;
-        new_h->prev = prev_h;
+        new_h->prev = last_h;
         new_h->next = (struct __header_t *) __heapend;
         new_h->size = size;
         new_h->magic = MAGIC;
         new_h->in_use = 1;
     }
+
+    /* new_h is the most-recently accessed block */
+    __last = (uintptr_t) new_h;
 
 #if MYMALLOCDEBUGVERBOSE
     __dump_heap();
@@ -357,7 +366,8 @@ unsigned int myfree(void *ptr) {
     struct __header_t *h = (struct __header_t *) ptr - 1;
 
     /* Verify block integrity */
-    __check_magic_number(h);
+    if (h->magic != MAGIC)
+        return 1;
 
     /* Flag block as not-in-use */
     h->in_use = 0;
@@ -374,8 +384,11 @@ unsigned int myfree(void *ptr) {
 
     /* Attempt to merge block with next block */
     if (h->next != (struct __header_t *) __heapend && !h->next->in_use) {
-        __merge_blocks(h, h->next);
+        h = __merge_blocks(h, h->next);
     }
+
+    /* h is the most-recently accessed block */
+    __last = (uintptr_t) h;
 
 #if MYMALLOCDEBUGVERBOSE
     warnx("HEAP AFTER MERGE:");
