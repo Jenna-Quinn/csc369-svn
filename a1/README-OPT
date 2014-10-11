@@ -1,3 +1,6 @@
-TODO: in one or two paragraphs, describe the changes you made to improve the efficiency
-of your malloc and free implementations. Your description should include some justification
-(specific use cases or traces, for example) that of the design decisions you made.
+To improve `mymalloc` efficiency, I did the following:
+
+- Avoid zeroing-out allocated memory by removing the call to `memset`.
+- Return early from the first-fit loop to prevent iterating over the entire block list every time.
+- Continue to use the first-fit strategy since it is faster than best-fit, but uses more space.
+- Continue to coalesce adjacent free blocks to use memory more effectively
