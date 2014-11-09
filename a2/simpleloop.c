@@ -10,9 +10,9 @@ struct krec {
 
 void heap_loop(int iters) {
 	int i;
-	struct krec *ptr = malloc(iters *sizeof(struct krec));
+	struct krec *ptr = malloc(iters * sizeof(struct krec));
 	for(i = 0; i < iters; i++) {
-		ptr[i].d[0] = (double)i;
+		ptr[i].d[0] = (double) i;
 	}
 	free(ptr);
 }
@@ -30,7 +30,7 @@ int main(int argc, char ** argv) {
 	volatile char MARKER_START, MARKER_END;
 	/* Record marker addresses */
 	FILE* marker_fp = fopen(".marker","w");
-	if(marker_fp == NULL ) {
+	if (marker_fp == NULL ) {
 		perror("Couldn't open marker file:");
 		exit(1);
 	}
