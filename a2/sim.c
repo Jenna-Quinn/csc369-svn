@@ -158,7 +158,11 @@ int main(int argc, char *argv[]) {
 
 		
 	init_pagetable();
-	coremap = malloc(memsize * sizeof(struct frame));
+	coremap = calloc((size_t) memsize, sizeof(struct frame));
+	if (coremap == NULL) {
+		perror("Malloc failed");
+		exit(1);
+	}
 
 	replay_trace(tfp);
 	//print_pagetable();
@@ -169,7 +173,7 @@ int main(int argc, char *argv[]) {
 	printf("Miss count: %d\n", miss_count);
 	printf("Total references : %d\n", ref_count);
 	printf("Hit rate: %.4f\n", (double)hit_count/ref_count * 100);
-	printf("Miss rate: %.4f\n", (double)miss_count/ref_count *100);
+	printf("Miss rate: %.4f\n", (double)miss_count/ref_count * 100);
 		
 	return(0);
 }
