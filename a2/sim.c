@@ -23,7 +23,7 @@ int ref_count = 0;
 struct functions {
     char *name;
     void (*init)(void);
-    int (*evict)(struct page *);
+    int (*evict)();
 };
 
 struct functions algs[] = {
@@ -35,7 +35,7 @@ struct functions algs[] = {
 };
 int num_algs = 5;
 
-int (*evict_fcn)(struct page *) = NULL;
+int (*evict_fcn)() = NULL;
 void (*init_fcn)() = NULL;
 
 
@@ -62,7 +62,7 @@ int find_frame(struct page *p) {
     }
     if(frame == -1) {
         // Didn't find a free page
-        frame = evict_fcn(p);
+        frame = evict_fcn();
     }
     coremap[frame].in_use = 1;
     coremap[frame].vaddr = p->vaddr;

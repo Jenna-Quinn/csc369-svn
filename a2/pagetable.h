@@ -36,8 +36,8 @@ void clock_init();
 void fifo_init();
 void opt_init();
 
-int rand_evict(struct page *p);
-int lru_evict(struct page *p);
-int clock_evict(struct page *p);
-int fifo_evict(struct page *p);
-int opt_evict(struct page *p);
+int rand_evict();
+int lru_evict();
+int clock_evict();
+int fifo_evict();
+int opt_evict();

@@ -17,7 +17,7 @@ extern struct frame *coremap;
  * was evicted.
  */
 
-int fifo_evict(struct page *p) {
+int fifo_evict(void) {
 	
 	return 0;
 }
