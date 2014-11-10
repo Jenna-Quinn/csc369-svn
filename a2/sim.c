@@ -169,11 +169,27 @@ int main(int argc, char *argv[]) {
 
 
     printf("\n");
-    printf("Hit count: %d\n", hit_count);
-    printf("Miss count: %d\n", miss_count);
-    printf("Total references : %d\n", ref_count);
-    printf("Hit rate: %.4f\n", (double)hit_count/ref_count * 100);
-    printf("Miss rate: %.4f\n", (double)miss_count/ref_count * 100);
+    if (0 <= tcgetpgrp(STDOUT_FILENO)) {
+        /*
+         * stdout is the controlling terminal.
+         * Stolen from <http://git.savannah.gnu.org/cgit/coreutils.git/tree/src/ls.c#n1318>
+         */
+        printf("Hit count:         %d\n", hit_count);
+        printf("Miss count:        %d\n", miss_count);
+        printf("Total references:  %d\n", ref_count);
+        printf("Hit rate:          %.4f\n", (double) hit_count / ref_count * 100);
+        printf("Miss rate:         %.4f\n", (double) miss_count / ref_count * 100);
+    } else {
+        /*
+         * stdout is a file
+         */
+        printf("%d\n", hit_count);
+        printf("%d\n", miss_count);
+        printf("%d\n", ref_count);
+        printf("%.4f\n", (double) hit_count / ref_count * 100);
+        printf("%.4f\n", (double) miss_count / ref_count * 100);
+    }
+
 
     return(0);
 }
