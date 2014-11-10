@@ -21,7 +21,15 @@ static int first_in;
  */
 
 int fifo_evict(void) {
-	return first_in = (first_in == memsize - 1 ? 0 : first_in + 1);
+    // choose a frame slot to evict a page from
+    int slot = first_in = (first_in == memsize - 1 ? 0 : first_in + 1);
+
+    // find the victim page in the pagetable and mark
+    // it as not in memory
+    struct page *victim = find_page(coremap[slot].vaddr);
+    victim->pframe = -1;
+
+    return slot;
 }
 
 /* Initialize any data structures needed for this 

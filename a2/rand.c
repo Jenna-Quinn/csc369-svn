@@ -14,7 +14,7 @@ extern int debug;
 
 extern struct frame *coremap;
 
-int rand_evict(struct page *p) {
+int rand_evict() {
 	// choose a frame slot to evict a page from
 	int slot = (int)(random() % memsize);
 
