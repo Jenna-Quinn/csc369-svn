@@ -1,6 +1,7 @@
 *.o
 sim
 simpleloop
+matmul
 *.dSYM
 .marker
 *.txt
