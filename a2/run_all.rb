@@ -8,7 +8,7 @@ TRACES = [
     '/u/csc369h/fall/pub/a2-traces/simpleloop',
     # '/u/csc369h/fall/pub/a2-traces/matmul-100',
     # '/u/csc369h/fall/pub/a2-traces/blocked-100-25',
-    # '<(valgrind --tool=lackey --trace-mem=yes make)'
+    # '<(valgrind --tool=lackey --trace-mem=yes make 2>&1)'
 ]
 
 TRACES.each do |trace|
