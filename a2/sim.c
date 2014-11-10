@@ -54,13 +54,13 @@ char *tracefile = NULL;
 int find_frame(struct page *p) {
     int i;
     int frame = -1;
-    for(i = 0; i < memsize; i++) {
-        if(!coremap[i].in_use) {
+    for (i = 0; i < memsize; i++) {
+        if (!coremap[i].in_use) {
             frame = i;
             break;
         }
     }
-    if(frame == -1) {
+    if (frame == -1) {
         // Didn't find a free page
         frame = evict_fcn();
     }
@@ -71,7 +71,7 @@ int find_frame(struct page *p) {
 }
 
 void access_mem(char type, addr_t vaddr) {
-    ref_count ++;
+    ref_count++;
     // get the page
     addr_t vpage = vaddr & ~0xfff;
     // make sure the page is in the page table
@@ -93,17 +93,16 @@ void replay_trace(FILE *infp) {
     int length = 0;
     char type;
 
-    while(fgets(buf, MAXLINE, infp) != NULL) {
-        if(buf[0] != '=') {
+    while (fgets(buf, MAXLINE, infp) != NULL) {
+        if (buf[0] != '=') {
             sscanf(buf, " %c %lx,%u", &type, &vaddr, &length);
-            if(debug)  {
+            if (debug)  {
                 printf("%c %lx, %u\n", type, vaddr, length);
             }
             access_mem(type, vaddr);
         } else {
             continue;
         }
-
     }
 }
 

@@ -53,10 +53,10 @@ struct page *pagetable_insert(addr_t vaddr, char type) {
 	if (*p != newpage && debug) {
 		printf ("    Duplicate item in tree!\n");
 	}
-	if(*p != newpage) {
+	if (*p != newpage) {
 		free(newpage);
 	}
-	return (struct page *)*p;
+	return (struct page *) *p;
 }
 
 struct page *find_page(addr_t vaddr) {
