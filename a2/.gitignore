@@ -2,3 +2,5 @@
 sim
 simpleloop
 *.dSYM
+.marker
+*.txt
