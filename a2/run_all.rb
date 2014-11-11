@@ -24,6 +24,7 @@ TRACES = [
 
 headings = [
     'Trace',
+    'm',
     'Hits',
     'Misses',
     'Total references',
@@ -40,10 +41,10 @@ headings = [
 
   rows = []
 
-  TRACES.each do |trace|
-    command = "cat #{trace} | ./sim -m 50 -a #{alg}"
+  TRACES.product([50, 100, 150, 200]).each do |trace, m|
+    command = "cat #{trace} | ./sim -m #{m} -a #{alg}"
     puts "\nRunning command: #{command}\n"
-    rows << [trace] + `#{command}`.split
+    rows << [trace, m] + `#{command}`.split
   end
 
   table.rows = rows
