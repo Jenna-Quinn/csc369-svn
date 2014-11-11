@@ -52,7 +52,7 @@ headings = [
     end
 
     # Add separator between traces
-    rows << :separator
+    rows << :separator unless trace == TRACES.last
   end
 
   table.rows = rows
