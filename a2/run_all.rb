@@ -23,7 +23,7 @@ TRACES = [
 # end
 
 file = File.new('tables.txt', 'a')
-file.write((x = "run_all.rb started at #{DateTime.now}\n") + '-' * (x.length - 1) + "\n\n")
+file.write((x = "run_all.rb started at #{Time.now}\n") + '-' * (x.length - 1) + "\n\n")
 
 headings = [
     'Trace',
