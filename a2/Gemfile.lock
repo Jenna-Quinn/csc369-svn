@@ -1,12 +1,10 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    ruby-progressbar (1.7.0)
     terminal-table (1.4.5)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
-  ruby-progressbar
   terminal-table
