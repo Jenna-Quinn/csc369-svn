@@ -4,6 +4,8 @@
 # Usage:
 #   ruby run_all.rb
 
+require 'terminal-table'
+
 TRACES = [
   '/u/csc369h/fall/pub/a2-traces/simpleloop',
   # '/u/csc369h/fall/pub/a2-traces/matmul-100',
@@ -18,8 +20,25 @@ unless system 'valgrind --tool=lackey --trace-mem=yes make > make.trace 2>&1'
   exit!
 end
 
+headings = [
+    'Hit count',
+    'Miss count',
+    'Total references',
+    'Hit rate',
+    'Miss rate'
+]
+
 TRACES.each do |trace|
   command = "cat #{trace} | ./sim -m 50 -a fifo"
-  puts "Running command: #{command}\n"
-  puts `#{command}`
+  puts "\nRunning command: #{command}\n"
+  `#{command}`.split.zip(headings) do |value, heading|
+    p 'heading', heading
+    p 'value', value
+  end
+
+  # table = Terminal::Table.new
+  # table.title = command
+  # table.headings = headings
+  # table.rows = rows
+  # table.style = {:width => 40}
 end
