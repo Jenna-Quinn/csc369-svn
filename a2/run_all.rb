@@ -22,6 +22,9 @@ TRACES = [
 #   exit!
 # end
 
+file = File.new('tables.txt', 'a')
+file.write((x = "run_all.rb started at #{DateTime.now}\n") + '-' * (x.length - 1) + "\n\n")
+
 headings = [
     'Trace',
     'm',
@@ -43,12 +46,15 @@ headings = [
 
   TRACES.product([50, 100, 150, 200]).each do |trace, m|
     command = "cat #{trace} | ./sim -m #{m} -a #{alg}"
-    puts "\nRunning command: #{command}\n"
+    puts "Running command: #{command}\n"
     rows << [trace, m] + `#{command}`.split
   end
 
   table.rows = rows
 
-  puts table
+  # Write table to tables.txt
+  file.write table
 
 end
+
+file.close
