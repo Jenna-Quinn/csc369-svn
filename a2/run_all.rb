@@ -44,16 +44,21 @@ headings = [
 
   rows = []
 
-  TRACES.product([50, 100, 150, 200]).each do |trace, m|
-    command = "cat #{trace} | ./sim -m #{m} -a #{alg}"
-    puts "Running command: #{command}\n"
-    rows << [trace, m] + `#{command}`.split
+  TRACES.each do |trace|
+    [50, 100, 150, 200].each do |m|
+      command = "cat #{trace} | ./sim -m #{m} -a #{alg}"
+      puts "Running command: #{command}\n"
+      rows << [trace, m] + `#{command}`.split
+    end
+
+    # Add separator between traces
+    rows << :separator
   end
 
   table.rows = rows
 
   # Write table to tables.txt
-  file.write table
+  file.write table.to_s + "\n\n"
 
 end
 
