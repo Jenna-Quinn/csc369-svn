@@ -10,17 +10,20 @@ TRACES = [
   '/u/csc369h/fall/pub/a2-traces/simpleloop',
   # '/u/csc369h/fall/pub/a2-traces/matmul-100',
   # '/u/csc369h/fall/pub/a2-traces/blocked-100-25',
-  './make.trace'
+  # './make.trace'
 ]
 
 # Use valgrind to create make.trace
-puts 'Creating \'make.trace\'...'
-unless system 'valgrind --tool=lackey --trace-mem=yes make > make.trace 2>&1'
-  puts 'Failed to create \'make.trace\''
-  exit!
-end
+# puts "Creating \'make.trace\'...\n"
+# command = 'valgrind --tool=lackey --trace-mem=yes make > make.trace 2>&1'
+# puts "Running `#{command}`..."
+# unless system command
+#   puts 'Failed to create \'make.trace\''
+#   exit!
+# end
 
 headings = [
+    'Trace',
     'Hit count',
     'Miss count',
     'Total references',
@@ -28,17 +31,22 @@ headings = [
     'Miss rate'
 ]
 
-TRACES.each do |trace|
-  command = "cat #{trace} | ./sim -m 50 -a fifo"
-  puts "\nRunning command: #{command}\n"
-  `#{command}`.split.zip(headings) do |value, heading|
-    p 'heading', heading
-    p 'value', value
+%w(fifo lru clock opt).each do |alg|
+  # Create a table per algorithm
+  table = Terminal::Table.new
+  table.title = alg
+  table.headings = headings
+
+  rows = []
+
+  TRACES.each do |trace|
+    command = "cat #{trace} | ./sim -m 50 -a #{alg}"
+    puts "\nRunning command: #{command}\n"
+    rows << [trace] + `#{command}`.split
   end
 
-  # table = Terminal::Table.new
-  # table.title = command
-  # table.headings = headings
-  # table.rows = rows
-  # table.style = {:width => 40}
+  table.rows = rows
+
+  puts table
+
 end
