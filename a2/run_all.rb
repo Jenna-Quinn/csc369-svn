@@ -24,8 +24,8 @@ TRACES = [
 
 headings = [
     'Trace',
-    'Hit count',
-    'Miss count',
+    'Hits',
+    'Misses',
     'Total references',
     'Hit rate',
     'Miss rate'
@@ -36,6 +36,7 @@ headings = [
   table = Terminal::Table.new
   table.title = alg
   table.headings = headings
+  table.style = {width: 120}
 
   rows = []
 
