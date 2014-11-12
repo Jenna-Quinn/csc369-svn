@@ -69,6 +69,10 @@ int find_frame(struct page *p) {
     coremap[frame].in_use = 1;
     coremap[frame].vaddr = p->vaddr;
     coremap[frame].type = p->type;
+
+    // set the ref bit used by clock
+    coremap[frame].ref = 1;
+
     return frame;
 }
 

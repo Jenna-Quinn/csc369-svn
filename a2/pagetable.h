@@ -29,6 +29,7 @@ struct frame {
 	char type;     //Instruction (I) or Data (D)
 	addr_t vaddr;
     unsigned long stamp;  // Time stamp of when this frame was last accessed
+    char ref;             // Reference bit used in clock
 };
 
 void rand_init();

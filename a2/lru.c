@@ -4,7 +4,6 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include "pagetable.h"
-#include "stack.h"
 
 
 extern int memsize;
