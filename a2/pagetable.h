@@ -28,6 +28,7 @@ struct frame {
 	char in_use;   //
 	char type;     //Instruction (I) or Data (D)
 	addr_t vaddr;
+    unsigned long stamp;  // Time stamp of when this frame was last accessed
 };
 
 void rand_init();
@@ -41,3 +42,6 @@ int lru_evict();
 int clock_evict();
 int fifo_evict();
 int opt_evict();
+
+// Functions called when memory is referenced
+void lru_reference(int frame);

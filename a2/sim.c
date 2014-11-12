@@ -24,18 +24,20 @@ struct functions {
     char *name;
     void (*init)(void);
     int (*evict)();
+    void (*reference)(int frame);
 };
 
 struct functions algs[] = {
-    {"rand", rand_init, rand_evict},
-    {"lru", lru_init, lru_evict},
-    {"fifo", fifo_init, fifo_evict},
-    {"clock",clock_init, clock_evict},
-    {"opt", opt_init, opt_evict}
+    {"rand", rand_init, rand_evict, NULL},
+    {"lru", lru_init, lru_evict, lru_reference},
+    {"fifo", fifo_init, fifo_evict, NULL},
+    {"clock",clock_init, clock_evict, NULL},
+    {"opt", opt_init, opt_evict, NULL}
 };
 int num_algs = 5;
 
 int (*evict_fcn)() = NULL;
+void (*reference_fcn)(int frame) = NULL;
 void (*init_fcn)() = NULL;
 
 
@@ -84,6 +86,11 @@ void access_mem(char type, addr_t vaddr) {
         p->pframe = find_frame(p);
     } else {
         hit_count++;
+    }
+
+    // Call the reference function if defined
+    if (reference_fcn != NULL) {
+        reference_fcn(p->pframe);
     }
 }
 
@@ -136,15 +143,16 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if(replacement_alg == NULL) {
+    if (replacement_alg == NULL) {
         fprintf(stderr, "%s", usage);
         exit(1);
     } else {
         int i;
         for (i = 0; i < num_algs; i++) {
-            if(strcmp(algs[i].name, replacement_alg) == 0) {
+            if (strcmp(algs[i].name, replacement_alg) == 0) {
                 init_fcn = algs[i].init;
                 evict_fcn = algs[i].evict;
+                reference_fcn = algs[i].reference;
                 break;
             }
         }
