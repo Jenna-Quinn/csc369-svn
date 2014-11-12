@@ -6,21 +6,11 @@
 
 require 'terminal-table'
 
-TRACES = [
-  '/u/csc369h/fall/pub/a2-traces/simpleloop',
-  '/u/csc369h/fall/pub/a2-traces/matmul-100',
-  '/u/csc369h/fall/pub/a2-traces/blocked-100-25',
-  './make.trace'
-]
-
-# Use valgrind to create make.trace
-puts "Creating \'make.trace\'...\n"
-command = 'valgrind --tool=lackey --trace-mem=yes make > make.trace 2>&1'
-puts "Running `#{command}`..."
-unless system command
-  puts 'Failed to create \'make.trace\''
-  exit!
-end
+TRACES = %w(
+  /u/csc369h/fall/pub/a2-traces/simpleloop
+  /u/csc369h/fall/pub/a2-traces/matmul-100
+  /u/csc369h/fall/pub/a2-traces/blocked-100-25
+)
 
 file = File.new('tables.txt', 'a')
 file.write((x = "run_all.rb started at #{Time.now}\n") + '=' * (x.length - 1) + "\n\n")
