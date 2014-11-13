@@ -32,7 +32,7 @@ struct functions algs[] = {
     {"lru", lru_init, lru_evict, lru_reference},
     {"fifo", fifo_init, fifo_evict, NULL},
     {"clock",clock_init, clock_evict, NULL},
-    {"opt", opt_init, opt_evict, NULL}
+    {"opt", opt_init, opt_evict, opt_reference}
 };
 int num_algs = 5;
 
@@ -72,6 +72,9 @@ int find_frame(struct page *p) {
 
     // set the ref bit used by clock
     coremap[frame].ref = 1;
+
+    // initialize next use distance to -1
+    coremap[frame].next_use = -1;
 
     return frame;
 }
@@ -140,7 +143,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
     }
-    if(tracefile != NULL) {
+    if (tracefile != NULL) {
         if((tfp = fopen(tracefile, "r")) == NULL) {
             perror("Error opening tracefile:");
             exit(1);
@@ -160,7 +163,7 @@ int main(int argc, char *argv[]) {
                 break;
             }
         }
-        if(evict_fcn == NULL) {
+        if (evict_fcn == NULL) {
             fprintf(stderr, "Error: invalid replacement algorithm - %s\n",
                     replacement_alg);
             exit(1);

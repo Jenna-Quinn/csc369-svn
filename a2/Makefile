@@ -14,5 +14,5 @@ matmul : matmul.c timer.h
 blocked : blocked.c timer.h
 	gcc -Wall -g -o blocked $^
 
-clean : 
+clean :
 	rm *.o sim

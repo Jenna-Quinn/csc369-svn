@@ -30,6 +30,7 @@ struct frame {
 	addr_t vaddr;
     unsigned long stamp;  // Time stamp of when this frame was last accessed
     char ref;             // Reference bit used in clock
+    long next_use;        // Distance to next use; used by opt
 };
 
 void rand_init();
@@ -46,3 +47,4 @@ int opt_evict();
 
 // Functions called when memory is referenced
 void lru_reference(int frame);
+void opt_reference(int frame);
