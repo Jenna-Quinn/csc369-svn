@@ -4,5 +4,5 @@ simpleloop
 matmul
 *.dSYM
 .marker
-*.txt
+simpleloop.txt
 make.trace
