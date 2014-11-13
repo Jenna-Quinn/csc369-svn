@@ -36,7 +36,7 @@ headings = [
 
   TRACES.each do |trace|
     [50, 100, 150, 200].each do |m|
-      command = "cat #{trace} | ./sim -m #{m} -a #{alg}"
+      command = "./sim -f #{trace} -m #{m} -a #{alg}"
       puts "Running command: #{command}\n"
       rows << [trace, m] + `#{command}`.split
     end
