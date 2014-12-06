@@ -1,0 +1,19 @@
+What's implemented (though buggy):
+
+- ext2_mkdir
+
+Not implemented (attempted to implement, but not working):
+
+- ext2_ln
+- ext2_cp
+- ext2_rm
+
+
+Completed features:
+
+- Accept command line arguments for each of the four programs
+- Map the disk image into memory, and read structures for the superblock and block group
+- Traverse paths via `ext2_traverse_path()`
+- Read directory entries by name via `ext2_read_entry_from_directory()`
+- Write initial directory entries via `ext2_write_directory_data()`
+- Set and unset bits in the inode bitmap via `ext2_set_inode_in_use()` and `ext2_free_inode()`

@@ -14,7 +14,8 @@ void ext2_mkdir(struct ext2_disk *disk, const char *target_directory_name) {
 
     // Read info about the containing directory
     char *last_segment;
-    struct ext2_inode *containing_directory = ext2_traverse_path(disk, NULL, target_directory_name, &last_segment);
+    uint32_t container_inode;
+    struct ext2_inode *containing_directory = ext2_traverse_path(disk, NULL, target_directory_name, &last_segment, &container_inode);
 
     struct ext2_directory_entry *entry;
     if ((entry = ext2_read_entry_from_directory(disk, containing_directory, last_segment))->inode_addr != 0) {
@@ -38,7 +39,7 @@ void ext2_mkdir(struct ext2_disk *disk, const char *target_directory_name) {
         strcpy(&entry->name, last_segment);
 
         // Write the data
-        int num_bytes = ext2_write_directory_data(disk, containing_directory, entry);
+        int num_bytes = ext2_write_directory_data(disk, container_inode, entry);
 
         // Set the entry size and type
         entry->size = (uint16_t) (sizeof(entry) + num_bytes);

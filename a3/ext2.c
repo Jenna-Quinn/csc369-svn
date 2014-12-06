@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <ForceFeedback/ForceFeedback.h>
 #include "ext2.h"
 
 
@@ -91,19 +92,17 @@ struct ext2_inode *ext2_get_inode(struct ext2_disk *disk, uint32_t block_addr, u
     return (struct ext2_inode *) &disk->bytes[byte_addr + (inode_addr - 1) * disk->superblock->inode_size];
 }
 
-uint32_t ext2_inode_addr(struct ext2_disk *disk, struct ext2_inode *inode) {
-    return (uint32_t) (((uintptr_t) inode) - ((uintptr_t) disk) / disk->superblock->inode_size);
-}
-
 /**
  * Read the directory containing the item with the given path (i.e. traverse each path segment until the last),
  * starting at the given current working directory.
  * Exit with an error if a directory along the path could not be found.
  */
-struct ext2_inode *ext2_traverse_path(struct ext2_disk *disk, struct ext2_inode *cwd, const char *file_path, char **last_segment) {
+struct ext2_inode *ext2_traverse_path(struct ext2_disk *disk, struct ext2_inode *cwd, const char *file_path, char **last_segment, uint32_t *container_inode) {
     if (file_path[0] == '/') {
         // Start from the root path
         struct ext2_inode *root_directory = ext2_get_inode(disk, 0, 2);
+        *container_inode = 2;
+
         if (file_path[1] == '\0') {
             // Path is just "/"; return the root directory
             *last_segment = "";
@@ -111,7 +110,7 @@ struct ext2_inode *ext2_traverse_path(struct ext2_disk *disk, struct ext2_inode 
         }
 
         // Otherwise, recurse using root_directory as cwd
-        return ext2_traverse_path(disk, root_directory, file_path + 1, last_segment);
+        return ext2_traverse_path(disk, root_directory, file_path + 1, last_segment, container_inode);
     } else {
         // file_path is relative to cwd; search for first path segment in cwd
 
@@ -130,18 +129,18 @@ struct ext2_inode *ext2_traverse_path(struct ext2_disk *disk, struct ext2_inode 
 
         // Find the directory inode in this directory
         struct ext2_directory_entry *entry_found = ext2_read_entry_from_directory(disk, cwd, segment);
+        *container_inode = entry_found->inode_addr;
         struct ext2_inode *inode_found = ext2_get_inode(disk, 0, entry_found->inode_addr);
 
         if (inode_found == NULL) {
             // Could not find inode in directory
             errx(1, "Could not find file or directory %s", segment);
-        } else if (IS_DIRECTORY(inode_found) && str != NULL) {
+        } else if (IS_DIRECTORY(inode_found)) {
             // Found a directory, and is not last path segment
             // Recurse with file_found as cwd
-            return ext2_traverse_path(disk, inode_found, str, last_segment);
+            return ext2_traverse_path(disk, inode_found, str, last_segment, container_inode);
         } else {
-            // Found the desired file; return it
-            return inode_found;
+            errx(1, "File %s is not a directory", segment);
         }
     }
 }
@@ -161,14 +160,6 @@ struct ext2_directory_entry *ext2_read_entry_from_directory(struct ext2_disk *di
     }
 
     return entry;
-}
-
-struct ext2_directory_entry *ext2_create_entry(struct ext2_disk *disk, struct ext2_directory_entry *entry, uint32_t inode_addr, struct ext2_inode *inode, char *name) {
-    entry->inode_addr = inode_addr;
-    entry->name_length = (uint8_t) strlen(name);
-
-    // Copy name into name field
-    strcpy(&entry->name, name);
 }
 
 uint32_t _get_free_inode_addr(struct ext2_disk *disk) {
@@ -191,18 +182,54 @@ struct ext2_inode *ext2_create_inode(struct ext2_disk *disk, struct ext2_inode *
 }
 
 int ext2_write_data(struct ext2_disk *disk, struct ext2_inode *file, FILE *source_file) {
+    int total_bytes = 0;
 
+    int i;
+    for (i = 0; i < 12; i++) {
+        void *dest = &disk->bytes[BLOCKSIZE(disk->superblock) * file->direct_blocks[i]];
+        size_t bytes_read = fread(dest, (size_t) BLOCKSIZE(disk->superblock), 1, source_file);
+        total_bytes += bytes_read;
+
+        // Set block as in-use
+        uint16_t *block_map = (uint16_t *) &disk->bytes[BLOCKSIZE(disk->superblock) * disk->block_groups[0]->block_usage_map_bn];
+        *block_map |= 1 << file->direct_blocks[i];
+
+        if (bytes_read < BLOCKSIZE(disk->superblock)) {
+            break;
+        }
+    }
+
+    return total_bytes;
 }
 
-int ext2_write_directory_data(struct ext2_disk *disk, struct ext2_inode *containing_directory, struct ext2_directory_entry *entry) {
+int ext2_write_directory_data(struct ext2_disk *disk, uint32_t containing_inode_addr, struct ext2_directory_entry *entry) {
     struct ext2_inode *inode = ext2_get_inode(disk, 0, entry->inode_addr);
 
-    uint32_t container_inode_addr = ext2_inode_addr(disk, containing_directory);
+    // Write entries for "." and ".."
+    struct ext2_directory_entry *current_entry = _next_directory_entry(disk, inode->direct_blocks[0], NULL);
+    struct ext2_directory_entry *upper_entry = _next_directory_entry(disk, inode->direct_blocks[0], current_entry);
+
+    current_entry->inode_addr = entry->inode_addr;
+    current_entry->name_length = 1;
+    strcpy(&current_entry->name, ".");
+
+    upper_entry->inode_addr = containing_inode_addr;
+    upper_entry->name_length = 2;
+    strcpy(&upper_entry->name, "..");
+
+    return sizeof(current_entry) + 1 + sizeof(upper_entry) + 2;
 }
 
 void ext2_set_inode_in_use(struct ext2_disk *disk, uint32_t inode_addr) {
     uint16_t *inode_map = (uint16_t *) &disk->bytes[BLOCKSIZE(disk->superblock) * disk->block_groups[0]->inode_usage_map_bn];
     *inode_map |= 1 << inode_addr;
+}
+
+void ext2_free_inode(struct ext2_disk *disk, uint32_t inode_addr) {
+    uint16_t *inode_map = (uint16_t *) &disk->bytes[BLOCKSIZE(disk->superblock) * disk->block_groups[0]->inode_usage_map_bn];
+    *inode_map &= ~(1 << inode_addr);
+
+    // TODO: free the data blocks
 }
 
 /**

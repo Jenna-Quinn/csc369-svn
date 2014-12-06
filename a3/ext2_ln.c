@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <err.h>
 #include <assert.h>
-#include <stddef.h>
+#include <string.h>
 #include "ext2.h"
 
 /**
@@ -11,25 +11,31 @@ void ext2_ln(struct ext2_disk *disk, const char *source_path, const char *target
     // Read info about the containing directories
     char *source_last_segment;
     char *target_last_segment;
-    struct ext2_inode *source_containing_directory = ext2_traverse_path(disk, NULL, source_path, &source_last_segment);
-    struct ext2_inode *target_containing_directory = ext2_traverse_path(disk, NULL, target_path, &target_last_segment);
+    uint32_t source_container_inode;
+    uint32_t target_container_inode;
+    struct ext2_inode *source_containing_directory = ext2_traverse_path(disk, NULL, source_path, &source_last_segment, &source_container_inode);
+    struct ext2_inode *target_containing_directory = ext2_traverse_path(disk, NULL, target_path, &target_last_segment, &target_container_inode);
 
     struct ext2_directory_entry *link;
-    if ((link = ext2_read_entry_from_directory(disk, source_containing_directory, source_last_segment)) != NULL) {
+    if ((link = ext2_read_entry_from_directory(disk, source_containing_directory, source_last_segment))->inode_addr != 0) {
         // File already exists
         errx(1, "File or directory with name %s already exists", source_last_segment);
     }
     struct ext2_directory_entry *target;
-    if ((target = ext2_read_entry_from_directory(disk, target_containing_directory, target_last_segment)) == NULL) {
+    if ((target = ext2_read_entry_from_directory(disk, target_containing_directory, target_last_segment))->inode_addr == 0) {
         // File does not exist
         errx(1, "Target file or directory with name %s does not exist", target_last_segment);
     }
 
-    // Create a new entry in the source directory
-    struct ext2_directory_entry *entry = ext2_create_entry(disk, source_containing_directory, source_last_segment, NULL, NULL);
+    // Set link entry attributes
+    link->inode_addr = target->inode_addr;
+    link->size = target->size;
+    link->name_length = target->name_length;
+    link->type_indicator = target->type_indicator;
+    strcpy(&link->name, &target->name);
 
-    // Set the inode for the entry
-    entry->inode_addr = link->inode_addr;
+    // Increment target link count
+    ext2_get_inode(disk, 0, link->inode_addr)->num_links++;
 }
 
 int main(int argc, char *argv[]) {

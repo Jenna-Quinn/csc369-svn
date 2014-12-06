@@ -156,11 +156,12 @@ struct ext2_disk {
 
 struct ext2_disk *ext2_read_disk(const char *filename);
 struct ext2_block_group **ext2_read_block_groups(struct ext2_disk *disk);
-struct ext2_inode *ext2_traverse_path(struct ext2_disk *disk, struct ext2_inode *cwd, const char *file_path, char **last_segment);
+struct ext2_inode *ext2_traverse_path(struct ext2_disk *disk, struct ext2_inode *cwd, const char *file_path, char **last_segment, uint32_t *container_inode);
 struct ext2_inode *ext2_get_inode(struct ext2_disk *disk, uint32_t block_addr, uint32_t inode_addr);
 struct ext2_directory_entry *ext2_read_entry_from_directory(struct ext2_disk *disk, struct ext2_inode *cwd, const char *name);
 struct ext2_directory_entry *ext2_create_entry(struct ext2_disk *disk, struct ext2_directory_entry *entry, uint32_t inode_addr, struct ext2_inode *inode, char *name);
 struct ext2_inode *ext2_create_inode(struct ext2_disk *disk, struct ext2_inode *cwd, const char *last_segment, uint32_t *inode_addr);
 int ext2_write_data(struct ext2_disk *disk, struct ext2_inode *file, FILE *source_file);
-int ext2_write_directory_data(struct ext2_disk *disk, struct ext2_inode *containing_directory, struct ext2_directory_entry *entry);
+int ext2_write_directory_data(struct ext2_disk *disk, uint32_t containing_inode_addr, struct ext2_directory_entry *entry);
 void ext2_set_inode_in_use(struct ext2_disk *disk, uint32_t inode_addr);
+void ext2_free_inode(struct ext2_disk *disk, uint32_t inode_addr);

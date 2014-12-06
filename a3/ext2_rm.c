@@ -10,26 +10,31 @@
 void ext2_rm(struct ext2_disk *disk, const char *target_file_name) {
     // Read info about the containing directory
     char *last_segment;
-    struct ext2_inode *containing_directory = ext2_traverse_path(disk, NULL, target_file_name, &last_segment);
+    uint32_t container_inode;
+    struct ext2_inode *containing_directory = ext2_traverse_path(disk, NULL, target_file_name, &last_segment, &container_inode);
 
-    struct ext2_directory_entry *file;
-    if ((file = ext2_read_entry_from_directory(disk, containing_directory, last_segment)) == NULL) {
+    struct ext2_directory_entry *entry;
+    if ((entry = ext2_read_entry_from_directory(disk, containing_directory, last_segment)) == NULL) {
         // File does not exist
         errx(1, "File with name %s does not exist", last_segment);
-    } else if (IS_DIRECTORY(ext2_get_inode(disk, 0, file->inode_addr))) {
+    } else if (IS_DIRECTORY(ext2_get_inode(disk, 0, entry->inode_addr))) {
         // Target is a directory
         errx(1, "Cannot remove directory %s", last_segment);
     } else {
         // Save the inode number
-        uint32_t inode_addr = file->inode_addr;
+        uint32_t inode_addr = entry->inode_addr;
 
-        // Remove the directory entry
-        ext2_remove_entry(disk, containing_directory, last_segment);
+        // Remove the directory entry by clearing its fields
+        entry->inode_addr = 0;
+        entry->size = 0;
+        entry->name_length = 0;
+        entry->type_indicator = 0;
+        entry->name = 0;
 
         // Decrement the hard link count
         if (--ext2_get_inode(disk, 0, inode_addr)->num_links == 0)
             // No more hard links point to the inode; free the inode and data blocks
-            ext2_free_inode(inode_addr);
+            ext2_free_inode(disk, inode_addr);
     }
 }
 

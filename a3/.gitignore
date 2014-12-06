@@ -1,8 +1,10 @@
 # Generated files
 *.o
 *.dSYM
-/test_malloc
-/test_malloc_opt
+/ext2_cp
+/ext2_ln
+/ext2_mkdir
+/ext2_rm
 
 # IDE files
 .idea
