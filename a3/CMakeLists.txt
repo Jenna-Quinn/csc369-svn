@@ -8,6 +8,7 @@ add_executable(ext2_cp
                ext2_cp.c)
 
 add_executable(ext2_mkdir
+               ext2
                ext2_mkdir.c)
 
 add_executable(ext2_ln
